@@ -31,7 +31,7 @@ humidity = uniform(50, 85)
 range_variation = (-0.15, 0.15)
 
 
-def generate_data() -> dict[str, float]:
+def generate_data() -> dict:
     """
     Generates temperature and humidity data and output as JSON.
     """
