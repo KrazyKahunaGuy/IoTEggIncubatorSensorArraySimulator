@@ -19,9 +19,11 @@ Code Organization:
 """
 
 from flask import Flask, Response, request
+from flask_cors import CORS
 from random import uniform, gauss
 
 app = Flask(__name__)
+CORS(app)
 
 # Initial temperature and humidity values
 temperature = uniform(25, 35)
