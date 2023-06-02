@@ -17,17 +17,38 @@ Code Organization:
 - `__name__ == '__main__'` block: Starts data generation and runs the Flask application.
 
 """
+from random import uniform, gauss, choice
+from datetime import datetime
 
-from flask import Flask, Response, request
-from flask_cors import CORS
-from random import uniform, gauss
+from flask import Flask, Response, request, jsonify
+from flask_cors import CORS, cross_origin
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-CORS(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///incubator.db'
+db = SQLAlchemy(app=app)
+CORS(app=app, origins='*')
+
+
+class SensorData(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    temperature = db.Column(db.Float)
+    humidity = db.Column(db.Float)
+    motion_detected = db.Column(db.Boolean)
+    water_refill = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime)
+
+
+class EggTurnSchedule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime)
+
 
 # Initial temperature and humidity values
 temperature = uniform(25, 35)
 humidity = uniform(50, 85)
+# motionSensorState = choice([True, False])
+# waterLevelSensorState = choice([True, False])
 
 # Range for variation
 range_variation = (-0.15, 0.15)
@@ -39,6 +60,10 @@ def generate_data() -> dict:
     """
 
     global temperature, humidity
+
+    water_level = choice([True, False])
+    motion_detected = choice([True, False])
+    incubator_status = choice(['active', 'paused', 'completed'])
 
     # Calculate  temperature growth or decay with randomness
     new_temperature = gauss(0, range_variation[1])
@@ -53,8 +78,7 @@ def generate_data() -> dict:
     temperature += new_temperature
     humidity += new_humidity
 
-    data = {'temperature': temperature, 'humidity': humidity}
-    return data
+    return temperature, humidity, water_level, motion_detected, incubator_status
 
 
 @app.route('/')
@@ -80,9 +104,17 @@ def sensor_data() -> Response:
     """
     Route handler for sensor data from the DHT11 temperature and humidity sensor.
     """
-    return generate_data()
+    temperature, humidity, water_level, motion_detected, incubator_status = generate_data()
+    # timestamp = datetime.now().isoformat()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check for null values
+    if temperature is None or humidity is None:
+        return jsonify(error='Null values received')
+
+    return jsonify(temperature=temperature, humidity=humidity, motionSensorState=motion_detected, waterLevelSensorState=water_level, incubatorStatus=incubator_status,timestamp=timestamp)
 
 
 if __name__ == '__main__':
     # Start the Flask application
-    app.run(debug=True, port=os.getenv("PORT", default=5000))
+    app.run(debug=True, port=5001)
